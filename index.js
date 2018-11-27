@@ -13,11 +13,14 @@ app.use(bodyParser.json({
 app.use(bodyParser.urlencoded({
     extended: false
 }));
+
+
 app.use(express.static(__dirname))
 
 
 app.get('/',function(req,res){
-    res.sendFile('./index.html');
+    console.log('Here');
+    res.sendFile('index.html');
 })
 
 app.post('/getdetails', function (req, res) {
