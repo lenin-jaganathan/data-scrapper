@@ -45,35 +45,59 @@
                     </div>
         </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.20.0/axios.min.js"
+        integrity="sha512-quHCp3WbBNkwLfYUMd+KwBAgpVukJu5MncuQaWXgCrfgcxCJAq/fo+oqrRKOj+UKEmyMCG3tb8RB63W+EmrOBg=="
+        crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/json2csv"></script>
     <script>
         $(function () {
-            $('#submit').click(function (e) {
+            $('#submit').click(async function (e) {
                 $('#error').hide()
                 e.preventDefault();
                 $('#submit').attr('disabled', 'disabled')
-                $.ajax({
-                    url: '/getdetails',
-                    method: 'post',
-                    contentType: 'application/json',
-                    cache: false,
-                    data: JSON.stringify({
-                        city: $('#city').val(),
-                        category: $('#name').val(),
-                        id: $('#id').val()
-                    }),
-                    success: function (response) {
-                        $('#submit').removeAttr('disabled')
-                        JSONToCSVConvertor(response,'data',true);
-                    },
-                    error: function (err) {
-                        $('#submit').removeAttr('disabled');
-                        $('#error').show()
-                        console.log(err);
-                    }
-                });
+                let result = [],output = []
+                let json = {
+                    city: $('#city').val() || 'Chennai',
+                    category: $('#name').val() || '',
+                    id: $('#id').val() || ''
+                }
+                await getDetails(result, json, 0);
+                $('#submit').removeAttr('disabled')
+                // console.log("output",result)
+                if (result.length > 0) {
+                    JSONToCSVConvertor(result, 'data', true);
+                }
+          
             })
 
+            async function getDetails(result, json, page) {
+                try {
+                    let catid = '';
+                    let max = 0;
+                    let response = await axios.get(`https://t.justdial.com/api/india_api_write/18july2018/searchziva.php?city=${json.city}&area=&lat=&long=&darea_flg=0&case=spcall&stype=category_list&search=${json.category}&national_catid=${json.id}&nextdocid=&attribute_values=&basedon=&sortby=&nearme=0&rnd1=0.60895&rnd2=0.94191&rnd3=0.39962&max=${max}&pg_no=${page}&wap=2&debugmode=1&median_latitude=&median_longitude=&bd_text=&login_mobile=&search_option=0&sort_order=0&pricedesc=0&priceasc=0&checkin=&checkout=&attr_search=&opt=&dummy=0&querySieve=search&querySieve=checkout&querySieve=checkin&adword_pos=%7B%2220%22%3A%22blog-20%22%7D&sieve=%7B%22name%22%3A%22resultModel%22%2C%22selector%22%3A%22result%22%2C%22runInit%22%3Atrue%7D&seopage=&searchReferrer=google-direct%7Cauto&referer=https%3A%2F%2Fwww.google.co.in%2F`);
+                    if (response && response.data && response.data.main && response.data.main.data && response.data.main.data.length) {
+                        (response.data.main.data).map(function (data) {
+                            let json = {
+                                name: data[1],
+                                address: data[3],
+                                timing: data[11] && data[11].timing,
+                                number: (data[15].list).map(function (data) {
+                                    return data.split('_', 1);
+                                }),
+                                place: data[18],
+                                url: data[19],
+                            }
+                            result.push(json);
+                        })
+                        await getDetails(result, json, (page + 1));
+                    } else {
+                        return result
+                    }
+                } catch (err) {
+                    console.log(err);
+                    return result;
+                }
+            }
             function JSONToCSVConvertor(JSONData, ReportTitle, ShowLabel) {
                 //If JSONData is not an object then JSON.parse will parse the JSON string in an Object
                 var arrData = typeof JSONData != 'object' ? JSON.parse(JSONData) : JSONData;
